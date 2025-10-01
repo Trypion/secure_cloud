@@ -1,0 +1,69 @@
+package utils
+
+import (
+	"crypto/rand"
+	"encoding/hex"
+	"log"
+
+	"golang.org/x/crypto/scrypt"
+)
+
+// Gera um salt aleatório de 32 bytes
+func GenerateSalt() (string, error) {
+	salt := make([]byte, 32)
+	_, err := rand.Read(salt)
+	if err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(salt), nil
+}
+
+// Aplica scrypt ao token PBKDF2 recebido do frontend
+func HashPassword(pbkdf2Token string, salt string) (string, error) {
+	saltBytes, err := hex.DecodeString(salt)
+	if err != nil {
+		return "", err
+	}
+
+	tokenBytes, err := hex.DecodeString(pbkdf2Token)
+	if err != nil {
+		return "", err
+	}
+
+	// Configurações do scrypt: N=16384, r=8, p=1, 32 bytes
+	hash, err := scrypt.Key(tokenBytes, saltBytes, 16384, 8, 1, 32)
+	if err != nil {
+		return "", err
+	}
+
+	return hex.EncodeToString(hash), nil
+}
+
+// Verifica se o token PBKDF2 corresponde ao hash armazenado
+func VerifyPassword(pbkdf2Token string, salt string, storedHash string) bool {
+	log.Printf("=== DEBUG VERIFY PASSWORD ===")
+	log.Printf("PBKDF2 Token recebido: %s", pbkdf2Token[:10]+"...")
+	log.Printf("Salt armazenado: %s", salt[:10]+"...")
+	log.Printf("Hash armazenado: %s", storedHash[:10]+"...")
+
+	hash, err := HashPassword(pbkdf2Token, salt)
+	if err != nil {
+		log.Printf("Erro ao gerar hash: %v", err)
+		return false
+	}
+
+	log.Printf("Hash calculado: %s", hash[:10]+"...")
+	log.Printf("Hashes coincidem: %v", hash == storedHash)
+
+	return hash == storedHash
+}
+
+// Gera um nome único para arquivo no storage
+func GenerateFileID() (string, error) {
+	bytes := make([]byte, 16)
+	_, err := rand.Read(bytes)
+	if err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(bytes), nil
+}
