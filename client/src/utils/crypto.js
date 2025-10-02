@@ -73,15 +73,25 @@ export const encryptFile = (fileData, password) => {
     if (typeof dataToEncrypt !== 'string') {
       dataToEncrypt = String(dataToEncrypt);
     }
+
+    console.log('Iniciando criptografia do arquivo');
+    console.log('Salt gerado:', salt);
+    console.log('Chave derivada:', key);
+    
+    // Gerar IV aleatório para esta operação
+    const iv = CryptoJS.lib.WordArray.random(16); // 16 bytes = 128 bits para AES
+    console.log('IV gerado:', iv.toString(CryptoJS.enc.Hex));
     
     const encrypted = CryptoJS.AES.encrypt(dataToEncrypt, keyWordArray, {
+      iv: iv,
       mode: CryptoJS.mode.CBC,
       padding: CryptoJS.pad.Pkcs7
     });
     
     const result = {
       encrypted: encrypted.toString(),
-      salt: salt
+      salt: salt,
+      iv: iv.toString(CryptoJS.enc.Hex) // Incluir IV no resultado
     };
 
     return result;
@@ -92,7 +102,7 @@ export const encryptFile = (fileData, password) => {
 };
 
 // Descriptografia AES para arquivos
-export const decryptFile = (encryptedData, password, salt) => {
+export const decryptFile = (encryptedData, password, salt, iv) => {
   try {
     // Validar entradas
     if (!encryptedData) {
@@ -104,7 +114,12 @@ export const decryptFile = (encryptedData, password, salt) => {
     if (!salt) {
       throw new Error('Salt não fornecido');
     }
-    
+    if (!iv) {
+      throw new Error('IV não fornecido');
+    }
+
+    console.log('Iniciando descriptografia do arquivo...');
+
     const key = deriveKeyFromPassword(password, salt);
     
     // Validar se a chave foi gerada corretamente
@@ -119,7 +134,12 @@ export const decryptFile = (encryptedData, password, salt) => {
       throw new Error('Falha ao processar chave de descriptografia');
     }
     
+    // Converter IV de hex para WordArray
+    const ivWordArray = CryptoJS.enc.Hex.parse(iv);
+    console.log('IV usado na descriptografia:', iv);
+    
     const decrypted = CryptoJS.AES.decrypt(encryptedData, keyWordArray, {
+      iv: ivWordArray,
       mode: CryptoJS.mode.CBC,
       padding: CryptoJS.pad.Pkcs7
     });

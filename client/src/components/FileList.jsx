@@ -62,7 +62,8 @@ const FileList = ({ refreshTrigger }) => {
       const decryptedContent = decryptFile(
         encryptedData.encrypted, 
         password, 
-        encryptedData.salt
+        encryptedData.salt,
+        encryptedData.iv
       );
       
       if (type === 'download') {

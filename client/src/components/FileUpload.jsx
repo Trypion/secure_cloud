@@ -36,8 +36,13 @@ const FileUpload = ({ onFileUploaded }) => {
       // Ler o arquivo
       const fileContent = await readFileAsText(selectedFile);
 
+      console.log("senha: ", password);
+      console.log("conteudo: ", fileContent);
+
       // Criptografar o arquivo com a senha fornecida
       const encryptedData = encryptFile(fileContent, password);
+
+      console.log("dados criptografados: ", encryptedData);
       
       // Fazer upload
       const response = await fileService.upload(selectedFile, encryptedData);
