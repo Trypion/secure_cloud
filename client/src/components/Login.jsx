@@ -29,26 +29,16 @@ const Login = ({ onSwitchToRegister }) => {
     setLoading(true);
 
     try {
-      const { pbkdf2Token, clientSalt } = hashPasswordForBackend(formData.password);
-      
-      console.log('Tentando login com usuário:', formData.username);
-      console.log('PBKDF2 Token gerado:', pbkdf2Token.substring(0, 10) + '...');
-      
-      const response = await authService.login(formData.username, pbkdf2Token);
-      
-      console.log('Resposta do login:', response);
-      
+      const { pbkdf2Token } = hashPasswordForBackend(formData.password);      
+      const response = await authService.login(formData.username, pbkdf2Token);    
+
       if (response.requires_totp) {
         setShowTOTP(true);
         setPendingUsername(formData.username);
-        // Armazenar dados temporariamente para criptografia de arquivos
-        localStorage.setItem('clientSalt', clientSalt);
-        localStorage.setItem('userPassword', formData.password);
+        // NÃO salvar a senha no localStorage por segurança
       }
       
     } catch (err) {
-      console.error('Erro no login:', err);
-      console.error('Resposta completa:', err.response);
       setError(err.response?.data?.error || 'Erro ao fazer login');
     } finally {
       setLoading(false);

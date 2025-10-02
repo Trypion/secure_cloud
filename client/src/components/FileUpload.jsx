@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { fileService } from '../services/api';
 import { encryptFile } from '../utils/crypto';
+import PasswordModal from './PasswordModal';
 
 const FileUpload = ({ onFileUploaded }) => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
 
   const handleFileSelect = (e) => {
     const file = e.target.files[0];
@@ -15,41 +17,30 @@ const FileUpload = ({ onFileUploaded }) => {
     setSuccess('');
   };
 
-  const handleUpload = async () => {
+  const handleUpload = () => {
     if (!selectedFile) {
       setError('Selecione um arquivo para upload');
       return;
     }
 
+    // Abrir modal para pedir senha
+    setShowPasswordModal(true);
+  };
+
+  const handlePasswordConfirm = async (password) => {
     setUploading(true);
     setError('');
     setSuccess('');
 
     try {
       // Ler o arquivo
-      console.log('Lendo arquivo:', selectedFile.name);
       const fileContent = await readFileAsText(selectedFile);
-      console.log('Arquivo lido, conteúdo length:', fileContent.length);
-      
-      // Obter senha do usuário para criptografia
-      const userPassword = localStorage.getItem('userPassword');
-      console.log('Senha recuperada do localStorage:', userPassword ? 'Sim' : 'Não');
-      
-      if (!userPassword) {
-        setError('Sessão expirada. Faça login novamente.');
-        setUploading(false);
-        return;
-      }
 
-      // Criptografar o arquivo
-      console.log('Iniciando criptografia...');
-      const encryptedData = encryptFile(fileContent, userPassword);
-      console.log('Criptografia concluída');
+      // Criptografar o arquivo com a senha fornecida
+      const encryptedData = encryptFile(fileContent, password);
       
       // Fazer upload
-      console.log('Iniciando upload...');
       const response = await fileService.upload(selectedFile, encryptedData);
-      console.log('Upload concluído:', response);
       
       setSuccess(`Arquivo "${response.filename}" enviado com sucesso!`);
       setSelectedFile(null);
@@ -63,9 +54,7 @@ const FileUpload = ({ onFileUploaded }) => {
       }
       
     } catch (err) {
-      console.error('Erro no upload:', err);
-      console.error('Stack trace:', err.stack);
-      setError(err.response?.data?.error || err.message || 'Erro ao fazer upload do arquivo');
+      throw new Error(err.response?.data?.error || err.message || 'Erro ao fazer upload do arquivo');
     } finally {
       setUploading(false);
     }
@@ -127,8 +116,17 @@ const FileUpload = ({ onFileUploaded }) => {
       </div>
       
       <div className="upload-info">
-        <p><strong>Nota:</strong> Os arquivos são criptografados automaticamente antes do upload para garantir sua segurança.</p>
+        <p><strong>🔐 Segurança:</strong> Sua senha será solicitada no momento do upload para criptografar o arquivo localmente.</p>
+        <p><strong>🛡️ Privacidade:</strong> Sua senha nunca é armazenada ou enviada para o servidor.</p>
       </div>
+
+      <PasswordModal
+        isOpen={showPasswordModal}
+        onClose={() => setShowPasswordModal(false)}
+        onConfirm={handlePasswordConfirm}
+        title="Criptografar Arquivo"
+        message="Digite sua senha para criptografar o arquivo antes do upload. O arquivo será criptografado localmente e sua senha não será armazenada."
+      />
     </div>
   );
 };

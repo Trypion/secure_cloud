@@ -59,9 +59,7 @@ const Register = ({ onSwitchToLogin }) => {
       const { pbkdf2Token } = hashPasswordForBackend(formData.password);
       
       const response = await authService.register(formData.username, pbkdf2Token);
-      
-      console.log('Resposta da API:', response);
-      
+           
       setSuccess('Usuário registrado com sucesso!');
       setTotpSecret(response.totp_secret);
       
@@ -71,7 +69,6 @@ const Register = ({ onSwitchToLogin }) => {
       }
       
     } catch (err) {
-      console.error('Erro no registro:', err);
       setError(err.response?.data?.error || 'Erro ao registrar usuário');
     } finally {
       setLoading(false);

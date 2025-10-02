@@ -41,19 +41,11 @@ func HashPassword(pbkdf2Token string, salt string) (string, error) {
 
 // Verifica se o token PBKDF2 corresponde ao hash armazenado
 func VerifyPassword(pbkdf2Token string, salt string, storedHash string) bool {
-	log.Printf("=== DEBUG VERIFY PASSWORD ===")
-	log.Printf("PBKDF2 Token recebido: %s", pbkdf2Token[:10]+"...")
-	log.Printf("Salt armazenado: %s", salt[:10]+"...")
-	log.Printf("Hash armazenado: %s", storedHash[:10]+"...")
-
 	hash, err := HashPassword(pbkdf2Token, salt)
 	if err != nil {
 		log.Printf("Erro ao gerar hash: %v", err)
 		return false
 	}
-
-	log.Printf("Hash calculado: %s", hash[:10]+"...")
-	log.Printf("Hashes coincidem: %v", hash == storedHash)
 
 	return hash == storedHash
 }

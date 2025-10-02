@@ -98,26 +98,18 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	log.Printf("Tentativa de login para usuário: %s", req.Username)
-
 	// Buscar usuário
 	var user models.User
 	if err := database.DB.Where("username = ?", req.Username).First(&user).Error; err != nil {
-		log.Printf("Usuário não encontrado: %s", req.Username)
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
 		return
 	}
-
-	log.Printf("Usuário encontrado: %s", user.Username)
 
 	// Verificar senha
 	if !utils.VerifyPassword(req.PBKDF2Token, user.Salt, user.Hash) {
-		log.Printf("Senha inválida para usuário: %s", req.Username)
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
 		return
 	}
-
-	log.Printf("Senha verificada com sucesso para usuário: %s", req.Username)
 
 	c.JSON(http.StatusOK, gin.H{
 		"message":       "Password verified, please provide TOTP code",

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { fileService } from '../services/api';
 import { decryptFile } from '../utils/crypto';
+import PasswordModal from './PasswordModal';
 
 const FileList = ({ refreshTrigger }) => {
   const [files, setFiles] = useState([]);
@@ -9,6 +10,8 @@ const FileList = ({ refreshTrigger }) => {
   const [downloading, setDownloading] = useState({});
   const [viewing, setViewing] = useState({});
   const [fileContent, setFileContent] = useState(null);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [pendingAction, setPendingAction] = useState(null);
 
   useEffect(() => {
     loadFiles();
@@ -26,55 +29,26 @@ const FileList = ({ refreshTrigger }) => {
     }
   };
 
-  const handleDownload = async (file) => {
-    setDownloading(prev => ({ ...prev, [file.id]: true }));
-    
-    try {
-      // Baixar arquivo criptografado
-      const encryptedBlob = await fileService.download(file.id);
-      
-      // Ler o conteúdo do blob
-      const encryptedText = await encryptedBlob.text();
-      const encryptedData = JSON.parse(encryptedText);
-      
-      // Obter senha do usuário para descriptografia
-      const userPassword = localStorage.getItem('userPassword');
-      if (!userPassword) {
-        alert('Sessão expirada. Faça login novamente.');
-        return;
-      }
-
-      // Descriptografar o arquivo
-      const decryptedContent = decryptFile(
-        encryptedData.encrypted, 
-        userPassword, 
-        encryptedData.salt
-      );
-      
-      // Criar blob para download
-      const blob = new Blob([decryptedContent], { type: 'text/plain' });
-      const url = URL.createObjectURL(blob);
-      
-      // Criar link de download
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = file.filename.replace('.encrypted', '');
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      
-      // Limpar URL
-      URL.revokeObjectURL(url);
-      
-    } catch (err) {
-      alert(err.response?.data?.error || 'Erro ao baixar arquivo');
-    } finally {
-      setDownloading(prev => ({ ...prev, [file.id]: false }));
-    }
+  const handleDownload = (file) => {
+    setPendingAction({ type: 'download', file });
+    setShowPasswordModal(true);
   };
 
-  const handleViewFile = async (file) => {
-    setViewing(prev => ({ ...prev, [file.id]: true }));
+  const handleViewFile = (file) => {
+    setPendingAction({ type: 'view', file });
+    setShowPasswordModal(true);
+  };
+
+  const handlePasswordConfirm = async (password) => {
+    if (!pendingAction) return;
+
+    const { type, file } = pendingAction;
+
+    if (type === 'download') {
+      setDownloading(prev => ({ ...prev, [file.id]: true }));
+    } else if (type === 'view') {
+      setViewing(prev => ({ ...prev, [file.id]: true }));
+    }
     
     try {
       // Baixar arquivo criptografado
@@ -83,32 +57,47 @@ const FileList = ({ refreshTrigger }) => {
       // Ler o conteúdo do blob
       const encryptedText = await encryptedBlob.text();
       const encryptedData = JSON.parse(encryptedText);
-      
-      // Obter senha do usuário para descriptografia
-      const userPassword = localStorage.getItem('userPassword');
-      if (!userPassword) {
-        alert('Sessão expirada. Faça login novamente.');
-        return;
-      }
 
-      // Descriptografar o arquivo
+      // Descriptografar o arquivo com a senha fornecida
       const decryptedContent = decryptFile(
         encryptedData.encrypted, 
-        userPassword, 
+        password, 
         encryptedData.salt
       );
       
-      // Mostrar conteúdo na tela
-      setFileContent({
-        filename: file.filename.replace('.encrypted', ''),
-        content: decryptedContent,
-        size: file.size
-      });
+      if (type === 'download') {
+        // Criar blob para download
+        const blob = new Blob([decryptedContent], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        
+        // Criar link de download
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = file.filename.replace('.encrypted', '');
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        
+        // Limpar URL
+        URL.revokeObjectURL(url);
+      } else if (type === 'view') {
+        // Mostrar conteúdo na tela
+        setFileContent({
+          filename: file.filename.replace('.encrypted', ''),
+          content: decryptedContent,
+          size: file.size
+        });
+      }
       
     } catch (err) {
-      alert(err.response?.data?.error || 'Erro ao visualizar arquivo');
+      throw new Error(err.response?.data?.error || 'Erro ao processar arquivo');
     } finally {
-      setViewing(prev => ({ ...prev, [file.id]: false }));
+      if (type === 'download') {
+        setDownloading(prev => ({ ...prev, [file.id]: false }));
+      } else if (type === 'view') {
+        setViewing(prev => ({ ...prev, [file.id]: false }));
+      }
+      setPendingAction(null);
     }
   };
 
@@ -235,6 +224,17 @@ const FileList = ({ refreshTrigger }) => {
           </div>
         </div>
       )}
+
+      <PasswordModal
+        isOpen={showPasswordModal}
+        onClose={() => {
+          setShowPasswordModal(false);
+          setPendingAction(null);
+        }}
+        onConfirm={handlePasswordConfirm}
+        title={pendingAction?.type === 'download' ? 'Baixar Arquivo' : 'Visualizar Arquivo'}
+        message={`Digite sua senha para descriptografar e ${pendingAction?.type === 'download' ? 'baixar' : 'visualizar'} o arquivo "${pendingAction?.file?.filename || ''}".`}
+      />
     </div>
   );
 };

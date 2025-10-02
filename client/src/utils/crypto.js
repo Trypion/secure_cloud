@@ -10,8 +10,6 @@ export const deriveKeyFromPassword = (password, salt) => {
     if (!salt || typeof salt !== 'string') {
       throw new Error('Salt inválido');
     }
-
-    console.log('Derivando chave - password length:', password.length, 'salt length:', salt.length);
     
     const saltWordArray = CryptoJS.enc.Hex.parse(salt);
     const key = CryptoJS.PBKDF2(password, saltWordArray, {
@@ -21,10 +19,8 @@ export const deriveKeyFromPassword = (password, salt) => {
     });
     
     const keyHex = key.toString(CryptoJS.enc.Hex);
-    console.log('Chave derivada com sucesso, length:', keyHex.length);
     return keyHex;
   } catch (error) {
-    console.error('Erro ao derivar chave:', error);
     throw new Error('Falha ao derivar chave de criptografia: ' + error.message);
   }
 };
@@ -34,10 +30,8 @@ export const generateSalt = () => {
   try {
     const salt = CryptoJS.lib.WordArray.random(32); // 32 bytes
     const saltHex = salt.toString(CryptoJS.enc.Hex);
-    console.log('Salt gerado, length:', saltHex.length);
     return saltHex;
   } catch (error) {
-    console.error('Erro ao gerar salt:', error);
     throw new Error('Falha ao gerar salt: ' + error.message);
   }
 };
@@ -52,10 +46,6 @@ export const encryptFile = (fileData, password) => {
     if (!password) {
       throw new Error('Senha não fornecida');
     }
-
-    console.log('Iniciando criptografia do arquivo...');
-    console.log('Tipo de dados:', typeof fileData);
-    console.log('Tamanho dos dados:', fileData.length);
 
     const salt = generateSalt();
     const key = deriveKeyFromPassword(password, salt);
@@ -83,8 +73,6 @@ export const encryptFile = (fileData, password) => {
     if (typeof dataToEncrypt !== 'string') {
       dataToEncrypt = String(dataToEncrypt);
     }
-
-    console.log('Dados preparados para criptografia');
     
     const encrypted = CryptoJS.AES.encrypt(dataToEncrypt, keyWordArray, {
       mode: CryptoJS.mode.CBC,
@@ -96,11 +84,9 @@ export const encryptFile = (fileData, password) => {
       salt: salt
     };
 
-    console.log('Criptografia concluída com sucesso');
     return result;
     
   } catch (error) {
-    console.error('Erro na criptografia:', error);
     throw new Error('Falha na criptografia do arquivo: ' + error.message);
   }
 };
@@ -118,9 +104,7 @@ export const decryptFile = (encryptedData, password, salt) => {
     if (!salt) {
       throw new Error('Salt não fornecido');
     }
-
-    console.log('Iniciando descriptografia do arquivo...');
-
+    
     const key = deriveKeyFromPassword(password, salt);
     
     // Validar se a chave foi gerada corretamente
@@ -165,12 +149,8 @@ export const hashPasswordForBackend = (password) => {
     iterations: 4096,
     hasher: CryptoJS.algo.SHA256
   });
-  
-  // Salt separado para criptografia de arquivos (baseado na senha original)
-  const fileSalt = CryptoJS.SHA256(password + "file-encryption-salt").toString(CryptoJS.enc.Hex).substring(0, 64);
-  
+
   return {
-    pbkdf2Token: hashedPassword.toString(CryptoJS.enc.Hex),
-    clientSalt: fileSalt // Para criptografia de arquivos
+    pbkdf2Token: hashedPassword.toString(CryptoJS.enc.Hex)
   };
 };
