@@ -38,7 +38,7 @@ const PasswordModal = ({ isOpen, onClose, onConfirm, title, message }) => {
     <div className="password-modal-overlay">
       <div className="password-modal-content">
         <div className="password-modal-header">
-          <h3>🔐 {title}</h3>
+          <h3>{title}</h3>
           <button 
             className="password-modal-close"
             onClick={handleClose}
@@ -89,7 +89,7 @@ const PasswordModal = ({ isOpen, onClose, onConfirm, title, message }) => {
         </div>
         
         <div className="password-modal-footer">
-          <small>🛡️ Sua senha é usada apenas para criptografia local e nunca é armazenada.</small>
+          <small>Sua senha é usada apenas para criptografia local e nunca é armazenada.</small>
         </div>
       </div>
     </div>
