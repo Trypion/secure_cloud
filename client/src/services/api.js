@@ -22,11 +22,10 @@ api.interceptors.request.use((config) => {
 // Interceptor para lidar com erros de autenticação
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
+  (error) => {    
     if (error.response?.status === 401) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      window.location.href = '/login';
     }
     return Promise.reject(error);
   }

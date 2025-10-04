@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { authService } from '../services/api';
-import { hashPasswordForBackend } from '../utils/crypto';
+import { hashPassword } from '../utils/crypto';
 import QRCode from 'qrcode';
 
 const Register = ({ onSwitchToLogin }) => {
@@ -56,7 +56,7 @@ const Register = ({ onSwitchToLogin }) => {
     setLoading(true);
 
     try {
-      const { pbkdf2Token } = hashPasswordForBackend(formData.password);
+      const { pbkdf2Token } = hashPassword(formData.password);
       
       const response = await authService.register(formData.username, pbkdf2Token);
            

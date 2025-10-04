@@ -17,6 +17,11 @@ const Login = ({ onSwitchToRegister }) => {
   const { login } = useAuth();
 
   const handleChange = (e) => {
+    // Limpar erro quando usuário começar a digitar
+    if (error) {
+      setError('');
+    }
+    
     setFormData({
       ...formData,
       [e.target.name]: e.target.value
@@ -39,7 +44,18 @@ const Login = ({ onSwitchToRegister }) => {
       }
       
     } catch (err) {
-      setError(err.response?.data?.error || 'Erro ao fazer login');
+      console.error('Erro no login:', err);
+      
+      // Tratamento mais específico de erros
+      if (err.response?.status === 401) {
+        setError('Usuário ou senha incorretos');
+      } else if (err.response?.status === 500) {
+        setError('Erro interno do servidor. Tente novamente.');
+      } else if (err.message === 'Network Error') {
+        setError('Erro de conexão. Verifique sua internet.');
+      } else {
+        setError(err.response?.data?.error || 'Erro ao fazer login. Tente novamente.');
+      }
     } finally {
       setLoading(false);
     }
@@ -57,7 +73,16 @@ const Login = ({ onSwitchToRegister }) => {
       login(response.user, response.token);
       
     } catch (err) {
-      setError(err.response?.data?.error || 'Código TOTP inválido');
+      console.error('Erro no TOTP:', err);
+      
+      // Tratamento mais específico de erros TOTP
+      if (err.response?.status === 401) {
+        setError('Código TOTP inválido ou expirado');
+      } else if (err.response?.status === 500) {
+        setError('Erro interno do servidor. Tente novamente.');
+      } else {
+        setError(err.response?.data?.error || 'Erro na verificação 2FA');
+      }
     } finally {
       setLoading(false);
     }
@@ -77,7 +102,13 @@ const Login = ({ onSwitchToRegister }) => {
               type="text"
               id="totpCode"
               value={totpCode}
-              onChange={(e) => setTotpCode(e.target.value)}
+              onChange={(e) => {
+                // Limpar erro quando usuário começar a digitar
+                if (error) {
+                  setError('');
+                }
+                setTotpCode(e.target.value);
+              }}
               placeholder="Digite o código de 6 dígitos"
               maxLength="6"
               required
