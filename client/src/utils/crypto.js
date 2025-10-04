@@ -43,16 +43,20 @@ export const encryptFile = (fileData, password) => {
     }
 
     const salt = generateSalt();
-    const key = deriveKeyFromPassword(password, salt);
 
-    const encKeyWordArray = CryptoJS.enc.Hex.parse(key.substring(0, 64)); // Primeiros 32 bytes para AES
-    const hmacKey = CryptoJS.PBKDF2(password + 'hmac', CryptoJS.enc.Hex.parse(salt), {
-      keySize: 256 / 32, // 32 bytes
+    const aesKey = CryptoJS.PBKDF2(password, CryptoJS.enc.Hex.parse(salt + "0001"), {
+      keySize: 256 / 32, // 32 bytes = 256 bits
+      iterations: 4096,
+      hasher: CryptoJS.algo.SHA256
+    });
+   
+    const hmacKey = CryptoJS.PBKDF2(password, CryptoJS.enc.Hex.parse(salt + "0002"), {
+      keySize: 256 / 32,
       iterations: 4096,
       hasher: CryptoJS.algo.SHA256
     });
 
-    if (!encKeyWordArray || !encKeyWordArray.words || encKeyWordArray.words.length === 0) {
+    if (!aesKey || !aesKey.words || aesKey.words.length === 0) {
       throw new Error('Falha ao processar chave de criptografia');
     }
 
@@ -82,7 +86,7 @@ export const encryptFile = (fileData, password) => {
     const iv = CryptoJS.lib.WordArray.random(16); // 16 bytes = 128 bits para AES-CBC
 
     // Criptografar usando AES-CBC
-    const encrypted = CryptoJS.AES.encrypt(dataToEncrypt, encKeyWordArray, {
+    const encrypted = CryptoJS.AES.encrypt(dataToEncrypt, aesKey, {
       iv: iv,
       mode: CryptoJS.mode.CBC,
       padding: CryptoJS.pad.Pkcs7
@@ -145,16 +149,21 @@ export const decryptFile = (encryptedData, password, salt, iv, authTag) => {
     if (!key || key.length !== 64) { // 32 bytes = 64 hex chars
       throw new Error('Chave de descriptografia inválida');
     }
-
-    // Derivar chaves separadas para criptografia e HMAC
-    const encKeyWordArray = CryptoJS.enc.Hex.parse(key.substring(0, 64)); // Primeiros 32 bytes para AES
-    const hmacKey = CryptoJS.PBKDF2(password + 'hmac', CryptoJS.enc.Hex.parse(salt), {
+ 
+    const aesKey = CryptoJS.PBKDF2(password, CryptoJS.enc.Hex.parse(salt + "0001"), {
       keySize: 256 / 32, // 32 bytes
       iterations: 4096,
       hasher: CryptoJS.algo.SHA256
     });
 
-    if (!encKeyWordArray || !encKeyWordArray.words || encKeyWordArray.words.length === 0) {
+
+    const hmacKey = CryptoJS.PBKDF2(password, CryptoJS.enc.Hex.parse(salt + "0002"), {
+      keySize: 256 / 32, // 32 bytes
+      iterations: 4096,
+      hasher: CryptoJS.algo.SHA256
+    });
+
+    if (!aesKey || !aesKey.words || aesKey.words.length === 0) {
       throw new Error('Falha ao processar chave de descriptografia');
     }
 
@@ -170,7 +179,7 @@ export const decryptFile = (encryptedData, password, salt, iv, authTag) => {
 
     const ivWordArray = CryptoJS.enc.Hex.parse(iv);
 
-    const decrypted = CryptoJS.AES.decrypt(encryptedData, encKeyWordArray, {
+    const decrypted = CryptoJS.AES.decrypt(encryptedData, aesKey, {
       iv: ivWordArray,
       mode: CryptoJS.mode.CBC,
       padding: CryptoJS.pad.Pkcs7
