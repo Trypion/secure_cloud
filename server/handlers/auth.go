@@ -39,7 +39,6 @@ func Register(c *gin.Context) {
 		return
 	}
 
-	// Verificar se o usuário já existe
 	var existingUser models.User
 	if err := database.DB.Where("username = ?", req.Username).First(&existingUser).Error; err == nil {
 		c.JSON(http.StatusConflict, gin.H{"error": "Username already exists"})
@@ -98,7 +97,6 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	// Buscar usuário
 	var user models.User
 	if err := database.DB.Where("username = ?", req.Username).First(&user).Error; err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
@@ -124,7 +122,6 @@ func VerifyTOTP(c *gin.Context) {
 		return
 	}
 
-	// Buscar usuário
 	var user models.User
 	if err := database.DB.Where("username = ?", req.Username).First(&user).Error; err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})

@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -20,54 +19,50 @@ func UploadFile(c *gin.Context) {
 		return
 	}
 
-	file, header, err := c.Request.FormFile("file")
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to get file"})
+	encryptedData := c.PostForm("file")
+	filename := c.PostForm("filename")
+	salt := c.PostForm("salt")
+	iv := c.PostForm("iv")
+	authTag := c.PostForm("authTag")
+
+	if encryptedData == "" || filename == "" || salt == "" || iv == "" || authTag == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Missing required parameters"})
 		return
 	}
-	defer file.Close()
 
-	// Gerar ID único para o arquivo
 	fileID, err := utils.GenerateFileID()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate file ID"})
 		return
 	}
 
-	// Criar diretório se não existir
 	storageDir := "../storage/files"
 	if err := os.MkdirAll(storageDir, 0755); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create storage directory"})
 		return
 	}
 
-	// Salvar arquivo
+	// Salvar dados criptografados (como Base64) no arquivo
 	storagePath := filepath.Join(storageDir, fileID)
-	dst, err := os.Create(storagePath)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create file"})
-		return
-	}
-	defer dst.Close()
-
-	fileSize, err := io.Copy(dst, file)
-	if err != nil {
+	if err := os.WriteFile(storagePath, []byte(encryptedData), 0644); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save file"})
 		return
 	}
 
-	// Salvar informações no banco
+	// Salvar metadados no banco
 	userFile := models.UserFile{
 		UserID:   userID.(uint),
-		Filename: header.Filename,
+		Filename: filename,
 		StoredAs: fileID,
-		Size:     fileSize,
+		Size:     int64(len(encryptedData)), // Tamanho dos dados Base64
+		Salt:     salt,
+		IV:       iv,
+		AuthTag:  authTag,
 	}
 
 	if err := database.DB.Create(&userFile).Error; err != nil {
-		// Remover arquivo se falhar ao salvar no banco
 		os.Remove(storagePath)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save file info"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save file metadata"})
 		return
 	}
 
@@ -111,23 +106,33 @@ func DownloadFile(c *gin.Context) {
 		return
 	}
 
-	// Buscar arquivo no banco
 	var userFile models.UserFile
 	if err := database.DB.Where("id = ? AND user_id = ?", uint(fileID), userID).First(&userFile).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "File not found"})
 		return
 	}
 
-	// Verificar se o arquivo existe no storage
 	storagePath := filepath.Join("../storage/files", userFile.StoredAs)
 	if _, err := os.Stat(storagePath); os.IsNotExist(err) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "File not found in storage"})
 		return
 	}
 
-	// Servir o arquivo
-	c.Header("Content-Disposition", "attachment; filename="+userFile.Filename)
-	c.File(storagePath)
+	// Ler dados criptografados (Base64 string)
+	encryptedData, err := os.ReadFile(storagePath)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read file"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"filename":       userFile.Filename,
+		"size":           userFile.Size,
+		"salt":           userFile.Salt,
+		"iv":             userFile.IV,
+		"auth_tag":       userFile.AuthTag,
+		"encrypted_data": string(encryptedData), // Retornar como string Base64
+	})
 }
 
 func DeleteFile(c *gin.Context) {

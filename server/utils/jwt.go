@@ -7,7 +7,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-var jwtSecret = []byte("your-secret-key-change-in-production") // Em produção, usar variável de ambiente
+var jwtSecret = []byte("secret_key")
 
 type Claims struct {
 	UserID   uint   `json:"user_id"`

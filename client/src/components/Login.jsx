@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { authService } from '../services/api';
-import { hashPasswordForBackend } from '../utils/crypto';
+import { hashPassword } from '../utils/crypto';
 import { useAuth } from '../context/AuthContext';
 
 const Login = ({ onSwitchToRegister }) => {
@@ -29,7 +29,7 @@ const Login = ({ onSwitchToRegister }) => {
     setLoading(true);
 
     try {
-      const { pbkdf2Token } = hashPasswordForBackend(formData.password);      
+      const { pbkdf2Token } = hashPassword(formData.password);      
       const response = await authService.login(formData.username, pbkdf2Token);    
 
       if (response.requires_totp) {

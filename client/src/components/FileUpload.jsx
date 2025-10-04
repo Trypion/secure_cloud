@@ -33,21 +33,16 @@ const FileUpload = ({ onFileUploaded }) => {
     setSuccess('');
 
     try {
-      // Ler o arquivo
-      const fileContent = await readFileAsText(selectedFile);
-
-      console.log("senha: ", password);
-      console.log("conteudo: ", fileContent);
+      // Ler o arquivo como ArrayBuffer para trabalhar com dados binários
+      const fileContent = await readFileAsArrayBuffer(selectedFile);
 
       // Criptografar o arquivo com a senha fornecida
       const encryptedData = encryptFile(fileContent, password);
-
-      console.log("dados criptografados: ", encryptedData);
       
-      // Fazer upload
+      // Fazer upload (agora passando a senha também)
       const response = await fileService.upload(selectedFile, encryptedData);
       
-      setSuccess(`Arquivo "${response.filename}" enviado com sucesso!`);
+      setSuccess(`Arquivo "${response.filename}" enviado e criptografado com sucesso!`);
       setSelectedFile(null);
       
       // Limpar input
@@ -59,18 +54,17 @@ const FileUpload = ({ onFileUploaded }) => {
       }
       
     } catch (err) {
-      throw new Error(err.response?.data?.error || err.message || 'Erro ao fazer upload do arquivo');
+      setError(err.response?.data?.error || err.message || 'Erro ao fazer upload do arquivo');
     } finally {
       setUploading(false);
     }
   };
 
-  const readFileAsText = (file) => {
+  const readFileAsArrayBuffer = (file) => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       
-      reader.onload = (e) => {
-        console.log('Arquivo lido com sucesso:', file.name);
+      reader.onload = (e) => {     
         resolve(e.target.result);
       };
       
@@ -79,9 +73,9 @@ const FileUpload = ({ onFileUploaded }) => {
         reject(new Error('Erro ao ler arquivo: ' + e.target.error));
       };
       
-      // Sempre ler como texto para simplificar
+      // Ler como ArrayBuffer para dados binários
       try {
-        reader.readAsText(file, 'UTF-8');
+        reader.readAsArrayBuffer(file);
       } catch (error) {
         console.error('Erro ao iniciar leitura:', error);
         reject(new Error('Erro ao iniciar leitura do arquivo'));
@@ -118,19 +112,14 @@ const FileUpload = ({ onFileUploaded }) => {
         >
           {uploading ? 'Enviando...' : 'Enviar Arquivo'}
         </button>
-      </div>
-      
-      <div className="upload-info">
-        <p><strong>🔐 Segurança:</strong> Sua senha será solicitada no momento do upload para criptografar o arquivo localmente.</p>
-        <p><strong>🛡️ Privacidade:</strong> Sua senha nunca é armazenada ou enviada para o servidor.</p>
-      </div>
+      </div>   
 
       <PasswordModal
         isOpen={showPasswordModal}
         onClose={() => setShowPasswordModal(false)}
         onConfirm={handlePasswordConfirm}
         title="Criptografar Arquivo"
-        message="Digite sua senha para criptografar o arquivo antes do upload. O arquivo será criptografado localmente e sua senha não será armazenada."
+        message="Digite uma senha para criptografar o arquivo antes do upload."
       />
     </div>
   );

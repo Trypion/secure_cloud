@@ -50,55 +50,48 @@ const FileList = ({ refreshTrigger }) => {
       setViewing(prev => ({ ...prev, [file.id]: true }));
     }
     
-    try {
-      // Baixar arquivo criptografado
-      const encryptedBlob = await fileService.download(file.id);
-      
-      // Ler o conteúdo do blob
-      const encryptedText = await encryptedBlob.text();
-      const encryptedData = JSON.parse(encryptedText);
+    try {  
+      const encryptedData = await fileService.download(file.id);  
 
-      // Descriptografar o arquivo com a senha fornecida
-      const decryptedContent = decryptFile(
-        encryptedData.encrypted, 
-        password, 
-        encryptedData.salt,
-        encryptedData.iv
-      );
-      
+      const decryptedData = decryptFile(encryptedData.encrypted_data, password, encryptedData.salt, encryptedData.iv, encryptedData.auth_tag);
+
+      const binaryString = atob(decryptedData);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+
       if (type === 'download') {
-        // Criar blob para download
-        const blob = new Blob([decryptedContent], { type: 'text/plain' });
+        const blob = new Blob([bytes]);
         const url = URL.createObjectURL(blob);
         
-        // Criar link de download
         const a = document.createElement('a');
         a.href = url;
-        a.download = file.filename.replace('.encrypted', '');
+        a.download = encryptedData.filename
         document.body.appendChild(a);
         a.click();
-        document.body.removeChild(a);
-        
-        // Limpar URL
+        document.body.removeChild(a); 
+   
         URL.revokeObjectURL(url);
-      } else if (type === 'view') {
-        // Mostrar conteúdo na tela
+      } else if (type === 'view') {    
         setFileContent({
-          filename: file.filename.replace('.encrypted', ''),
-          content: decryptedContent,
+          filename: encryptedData.filename,
+          content: new TextDecoder('utf-8').decode(bytes),
           size: file.size
         });
       }
+ 
+      setPendingAction(null);
+      setShowPasswordModal(false);
       
-    } catch (err) {
-      throw new Error(err.response?.data?.error || 'Erro ao processar arquivo');
+    } catch (err) {      
+      throw new Error(err.response?.data?.error || err.message || 'Erro ao processar arquivo');
     } finally {
       if (type === 'download') {
         setDownloading(prev => ({ ...prev, [file.id]: false }));
       } else if (type === 'view') {
         setViewing(prev => ({ ...prev, [file.id]: false }));
       }
-      setPendingAction(null);
     }
   };
 
@@ -154,11 +147,21 @@ const FileList = ({ refreshTrigger }) => {
               </tr>
             </thead>
             <tbody>
-              {files.map(file => (
-                <tr key={file.id}>
-                  <td>{file.filename.replace('.encrypted', '')}</td>
-                  <td>{formatFileSize(file.size)}</td>
-                  <td>{formatDate(file.created_at)}</td>
+              {files.map(file => {
+                const displayName = file.filename;
+                return (
+                  <tr key={file.id}>
+                    <td>
+                      <span 
+                        className="file-name" 
+                        title={displayName}
+                        data-full-name={displayName}
+                      >
+                        {displayName}
+                      </span>
+                    </td>
+                    <td>{formatFileSize(file.size)}</td>
+                    <td>{formatDate(file.created_at)}</td>
                   <td>
                     <div className="file-actions">
                       <button
@@ -184,7 +187,8 @@ const FileList = ({ refreshTrigger }) => {
                     </div>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -230,7 +234,8 @@ const FileList = ({ refreshTrigger }) => {
         isOpen={showPasswordModal}
         onClose={() => {
           setShowPasswordModal(false);
-          setPendingAction(null);
+          // Só limpar pendingAction se realmente cancelar (não quando há erro)
+          setTimeout(() => setPendingAction(null), 100);
         }}
         onConfirm={handlePasswordConfirm}
         title={pendingAction?.type === 'download' ? 'Baixar Arquivo' : 'Visualizar Arquivo'}

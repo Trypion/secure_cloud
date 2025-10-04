@@ -18,7 +18,7 @@ func GenerateSalt() (string, error) {
 	return hex.EncodeToString(salt), nil
 }
 
-// Aplica scrypt ao token PBKDF2 recebido do frontend
+// Aplica scrypt ao token PBKDF2
 func HashPassword(pbkdf2Token string, salt string) (string, error) {
 	saltBytes, err := hex.DecodeString(salt)
 	if err != nil {
@@ -50,7 +50,6 @@ func VerifyPassword(pbkdf2Token string, salt string, storedHash string) bool {
 	return hash == storedHash
 }
 
-// Gera um nome único para arquivo no storage
 func GenerateFileID() (string, error) {
 	bytes := make([]byte, 16)
 	_, err := rand.Read(bytes)

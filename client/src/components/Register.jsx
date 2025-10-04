@@ -141,17 +141,7 @@ const Register = ({ onSwitchToLogin }) => {
           )}
           
           <p>Ou insira manualmente o código:</p>
-          <code>{totpSecret}</code>
-          
-          <div className="qr-instructions">
-            <p><strong>Instruções:</strong></p>
-            <ol>
-              <li>Baixe um app autenticador (Google Authenticator, Authy, etc.)</li>
-              <li>Abra o app e escaneie o QR Code acima</li>
-              <li>Ou digite manualmente o código secreto</li>
-              <li>Use o código de 6 dígitos para fazer login</li>
-            </ol>
-          </div>
+          <code>{totpSecret}</code>          
           
           <div className="actions">
             <button onClick={onSwitchToLogin}>

@@ -62,12 +62,12 @@ export const fileService = {
   upload: async (file, encryptedData) => {
     const formData = new FormData();
     
-    // Criar um blob com os dados criptografados
-    const encryptedBlob = new Blob([JSON.stringify(encryptedData)], {
-      type: 'application/octet-stream'
-    });
-    
-    formData.append('file', encryptedBlob, file.name + '.encrypted');
+    // Enviar dados criptografados como string Base64
+    formData.append('file', encryptedData.encrypted);
+    formData.append('filename', file.name);
+    formData.append('salt', encryptedData.salt);
+    formData.append('iv', encryptedData.iv);
+    formData.append('authTag', encryptedData.authTag);
     
     const response = await api.post('/upload', formData, {
       headers: {
@@ -83,9 +83,7 @@ export const fileService = {
   },
 
   download: async (fileId) => {
-    const response = await api.get(`/files/${fileId}`, {
-      responseType: 'blob'
-    });
+    const response = await api.get(`/files/${fileId}`);
     return response.data;
   },
 
