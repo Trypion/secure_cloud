@@ -1,2 +1,4 @@
 *.db
 storage/
+server/static/*
+*.exe

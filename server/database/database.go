@@ -3,7 +3,7 @@ package database
 import (
 	"secure-cloud-server/models"
 
-	"gorm.io/driver/sqlite"
+	sqlite "github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 )
 
