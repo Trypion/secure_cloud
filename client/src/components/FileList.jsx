@@ -53,16 +53,10 @@ const FileList = ({ refreshTrigger }) => {
     try {  
       const encryptedData = await fileService.download(file.id);  
 
-      const decryptedData = decryptFile(encryptedData.encrypted_data, password, encryptedData.salt, encryptedData.iv, encryptedData.auth_tag);
-
-      const binaryString = atob(decryptedData);
-      const bytes = new Uint8Array(binaryString.length);
-      for (let i = 0; i < binaryString.length; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
-      }
+      const binaryString = await decryptFile(encryptedData.encrypted_data, password, encryptedData.salt, encryptedData.iv, encryptedData.auth_tag);
 
       if (type === 'download') {
-        const blob = new Blob([bytes]);
+        const blob = new Blob([binaryString]);
         const url = URL.createObjectURL(blob);
         
         const a = document.createElement('a');
@@ -76,7 +70,7 @@ const FileList = ({ refreshTrigger }) => {
       } else if (type === 'view') {    
         setFileContent({
           filename: encryptedData.filename,
-          content: new TextDecoder('utf-8').decode(bytes),
+          content: new TextDecoder('utf-8').decode(binaryString),
           size: file.size
         });
       }

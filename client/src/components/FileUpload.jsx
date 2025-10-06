@@ -37,7 +37,7 @@ const FileUpload = ({ onFileUploaded }) => {
       const fileContent = await readFileAsArrayBuffer(selectedFile);
 
       // Criptografar o arquivo com a senha fornecida
-      const encryptedData = encryptFile(fileContent, password);
+      const encryptedData = await encryptFile(fileContent, password);
       
       // Fazer upload (agora passando a senha também)
       const response = await fileService.upload(selectedFile, encryptedData);
